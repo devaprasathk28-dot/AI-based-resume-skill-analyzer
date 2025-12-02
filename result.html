@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="score-circle">{{ summary.score }}%</div>
+        <p class="muted" style="text-align:center;">
+            Match score for role: <strong>{{ summary.role_label }}</strong>
+        </p>
+
+        <p class="section-title">Matched Role Skills ({{ summary.found_for_role|length }})</p>
+        <div>
+            {% if summary.found_for_role %}
+                {% for s in summary.found_for_role %}
+                    <span class="pill pill-good">{{ s }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="muted">No role-specific skills detected in your resume text.</span>
+            {% endif %}
+        </div>
+
+        <p class="section-title">Missing Role Skills ({{ summary.missing_for_role|length }})</p>
+        <div>
+            {% if summary.missing_for_role %}
+                {% for s in summary.missing_for_role %}
+                    <span class="pill pill-missing">{{ s }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="muted">You have mentioned all expected skills for this role.</span>
+            {% endif %}
+        </div>
+
+        <p class="section-title">Soft Skills Mentioned ({{ summary.found_soft|length }})</p>
+        <div>
+            {% if summary.found_soft %}
+                {% for s in summary.found_soft %}
+                    <span class="pill pill-good">{{ s }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="muted">No common soft skills detected explicitly.</span>
+            {% endif %}
+        </div>
+
+        <p class="section-title">Soft Skills You Can Add</p>
+        <div>
+            {% if summary.missing_soft %}
+                {% for s in summary.missing_soft %}
+                    <span class="pill pill-missing">{{ s }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="muted">You already mention most common soft skills.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <p class="section-title">Summary</p>
+        <p class="muted">
+            Name: <strong>{{ name }}</strong><br>
+            Target Role: <strong>{{ summary.role_label }}</strong><br>
+            Expected role skills: <strong>{{ summary.expected_skills|length }}</strong><br>
+            Skills matched: <strong>{{ summary.found_for_role|length }}</strong> /
+            {{ summary.expected_skills|length }}
+        </p>
+
+        <p class="section-title">Interpretation</p>
+        <p class="muted">
+            A higher score means your resume already covers many of the important keywords 
+            for this role. To improve, honestly include the missing skills where applicable
+            (for example in your skills, projects, or experience sections).
+        </p>
+
+        <p class="section-title">Raw Resume Text</p>
+        <pre>{{ resume_text }}</pre>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <form method="post" action="{{ url_for('analyze') }}">
+            <label for="name">Your Name</label>
+            <input type="text" name="name" id="name" required>
+
+            <label for="role">Target Role</label>
+            <select name="role" id="role">
+                {% for key, info in roles.items() %}
+                    <option value="{{ key }}">{{ info.label }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="resume_text">Paste Your Resume (Summary, Skills, Projects, Experience)</label>
+            <textarea name="resume_text" id="resume_text"
+                      placeholder="Paste your resume text here..."></textarea>
+
+            <button type="submit">Analyze Skills</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <p class="section-title">How This Tool Helps You</p>
+        <p class="muted">
+            This mini project simulates how Applicant Tracking Systems (ATS) and recruiters
+            scan resumes for important keywords. It compares your resume against the skill-set
+            needed for a particular role and shows a match score.
+        </p>
+
+        <div class="grid grid-3" style="margin-top: 10px;">
+            <div class="mini-card">
+                <div class="mini-card-title">Role-Aware</div>
+                <div>Each role has its own expected skill set (Python Dev, Data Analyst, ML Engineer, etc.).</div>
+            </div>
+            <div class="mini-card">
+                <div class="mini-card-title">Soft Skills</div>
+                <div>Also checks for communication, teamwork, leadership and other soft skills.</div>
+            </div>
+            <div class="mini-card">
+                <div class="mini-card-title">Viva-Friendly</div>
+                <div>Easy to explain: Python, Flask, file handling, simple NLP-style matching.</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

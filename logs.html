@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <p class="section-title">Analysis Logs</p>
+    <p class="muted">
+        These logs are stored in <code>resume_logs.txt</code> using Python file handling.
+        Each entry contains name, role, score, and matched/missing skills.
+    </p>
+    <pre>{{ logs }}</pre>
+</div>
+{% endblock %}
