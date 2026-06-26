@@ -81,19 +81,64 @@ SOFT_SKILLS = [
     "creativity", "collaboration", "self motivation", "presentation"
 ]
 
+import re
+
+# Master taxonomy combining preset roles and extra modern technologies
+MASTER_TAXONOMY = sorted(list(set(
+    [s for info in ROLE_SKILLS.values() for s in info["skills"]] +
+    SOFT_SKILLS +
+    [
+        "typescript", "java", "c++", "c#", "go", "golang", "rust", "php", "ruby", "swift", "kotlin",
+        "flutter", "react native", "agile", "scrum", "graphql", "mongodb", "redis", "elasticsearch",
+        "kafka", "rabbitmq", "nginx", "gitlab", "github actions", "ansible", "unix", "devops",
+        "microservices", "serverless", "next.js", "nextjs", "angular", "node.js", "nodejs",
+        "express", "spring boot", "tailwind", "sass", "less", "redux", "webpack", "npm", "yarn"
+    ]
+)))
+
 
 def init_log_file():
-    if not os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "w", encoding="utf-8") as f:
-            f.write("==== Resume Skill Analyzer Logs (Web Version) ====\n\n")
+    try:
+        if not os.path.exists(LOG_FILE):
+            with open(LOG_FILE, "w", encoding="utf-8") as f:
+                f.write("==== Resume Skill Analyzer Logs (Web Version) ====\n\n")
+    except OSError:
+        pass # Ignore filesystem errors in serverless execution
 
 
-def analyze_resume_text(resume_text: str, role_key: str):
+def extract_skills_from_jd(jd_text: str):
+    text = (jd_text or "").lower()
+    found_skills = []
+    for s in MASTER_TAXONOMY:
+        if len(s) <= 3:
+            # Word boundary search for short strings (avoid matching 'go' in 'good')
+            pattern = rf"\b{re.escape(s)}\b"
+            if re.search(pattern, text):
+                found_skills.append(s)
+        else:
+            if s in text:
+                found_skills.append(s)
+    return sorted(list(set(found_skills)))
+
+
+def analyze_resume_text(resume_text: str, role_key: str, jd_text: str = None):
     text = (resume_text or "").lower()
-    role_info = ROLE_SKILLS.get(role_key, ROLE_SKILLS["ai_ds_student"])
-    expected_skills = role_info["skills"]
+    
+    if jd_text:
+        # Jobscan Custom JD Mode
+        expected_skills = extract_skills_from_jd(jd_text)
+        role_label = "Custom Job Description (Jobscan Mode)"
+        if not expected_skills:
+            # Fallback expected skills if none matched the taxonomy
+            expected_skills = ["python", "sql", "git", "communication", "problem-solving"]
+            role_label = "Custom Job Description (Fallback Preset)"
+    else:
+        # Preset Mode
+        role_info = ROLE_SKILLS.get(role_key, ROLE_SKILLS["ai_ds_student"])
+        expected_skills = role_info["skills"]
+        role_label = role_info["label"]
 
-    # Role-specific matches
+    # Match expected skills
     found_for_role = sorted({s for s in expected_skills if s in text})
     missing_for_role = sorted([s for s in expected_skills if s not in found_for_role])
 
@@ -109,9 +154,26 @@ def analyze_resume_text(resume_text: str, role_key: str):
     if expected_skills:
         score = round(len(found_for_role) / len(expected_skills) * 100)
 
+    # Suitability & ATS Pass Chance
+    if score >= 80:
+        suitability_status = "Excellent Match"
+        suitability_desc = "Highly Suitable - Your resume demonstrates outstanding alignment with the job requirements."
+        ats_verdict = "Strong Pass"
+        ats_desc = "Highly likely to clear automated parsing rules. Key skill phrases are well covered."
+    elif score >= 50:
+        suitability_status = "Suitable"
+        suitability_desc = "Suitable with Tailoring - You cover core keywords, but optimizing the missing skills will maximize response rates."
+        ats_verdict = "Borderline"
+        ats_desc = "Moderate pass probability. Key skill gaps might trigger automatic screening filters."
+    else:
+        suitability_status = "Not Yet Suitable"
+        suitability_desc = "Low Alignment - Significant skill gaps detected. You should acquire or highlight the missing skills to match this JD."
+        ats_verdict = "High Risk"
+        ats_desc = "Likely to be filtered out by automated ATS keywords check. Needs immediate tailoring."
+
     summary = {
         "role_key": role_key,
-        "role_label": role_info["label"],
+        "role_label": role_label,
         "expected_skills": expected_skills,
         "found_for_role": found_for_role,
         "missing_for_role": missing_for_role,
@@ -119,6 +181,11 @@ def analyze_resume_text(resume_text: str, role_key: str):
         "found_soft": found_soft,
         "missing_soft": missing_soft,
         "score": score,
+        "suitability_status": suitability_status,
+        "suitability_desc": suitability_desc,
+        "ats_verdict": ats_verdict,
+        "ats_desc": ats_desc,
+        "is_custom": bool(jd_text)
     }
     return summary
 
@@ -142,6 +209,7 @@ def append_log(name: str, summary: dict):
 
     lines.append("Missing Skills for Role:")
     if summary["missing_for_role"]:
+        for s in summary["missing_for_role"]:
             lines.append(f"  - {s}")
     else:
         lines.append("  (none)")
@@ -155,8 +223,11 @@ def append_log(name: str, summary: dict):
 
     lines.append("==============================================\n")
 
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+    except OSError:
+        pass # Ignore file writes on read-only environments
 
 
 @app.route("/", methods=["GET"])
@@ -167,7 +238,9 @@ def index():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     name = (request.form.get("name") or "").strip()
+    analysis_method = (request.form.get("analysis_method") or "preset").strip()
     role_key = (request.form.get("role") or "ai_ds_student").strip()
+    job_description = (request.form.get("job_description") or "").strip()
     resume_text = (request.form.get("resume_text") or "").strip()
 
     if not name:
@@ -176,8 +249,15 @@ def analyze():
     if not resume_text:
         flash("Please paste your resume text for analysis.")
         return redirect(url_for("index"))
+    if analysis_method == "custom" and not job_description:
+        flash("Please paste the Job Description to perform a Jobscan analysis.")
+        return redirect(url_for("index"))
 
-    summary = analyze_resume_text(resume_text, role_key)
+    if analysis_method == "custom":
+        summary = analyze_resume_text(resume_text, role_key, jd_text=job_description)
+    else:
+        summary = analyze_resume_text(resume_text, role_key)
+
     append_log(name, summary)
 
     return render_template(
@@ -191,12 +271,14 @@ def analyze():
 @app.route("/logs", methods=["GET"])
 def logs():
     init_log_file()
-    if not os.path.exists(LOG_FILE):
-        content = "No logs found yet."
-    else:
-        with open(LOG_FILE, "r", encoding="utf-8") as f:
-            data = f.read().strip()
-            content = data or "No logs found yet."
+    content = "No logs found yet."
+    if os.path.exists(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                data = f.read().strip()
+                content = data or "No logs found yet."
+        except OSError:
+            content = "System logs are unavailable in this server environment."
     return render_template("logs.html", logs=content)
 
 

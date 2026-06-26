@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "AI Resume Skill Analyzer" }}</title>
+    
+    <!-- PDFJS Library for frontend PDF Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
+    <!-- Custom Modern Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="page">
+        <!-- Modern Navigation Bar -->
+        <nav class="navbar">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+                </svg>
+                <span>Resume Analyzer</span>
+            </a>
+            <div class="navbar-menu">
+                <a href="{{ url_for('index') }}" class="{% if request.path == '/' or request.path == '/analyze' %}active{% endif %}">
+                    Analyze Resume
+                </a>
+                <a href="{{ url_for('logs') }}" class="{% if request.path == '/logs' %}active{% endif %}">
+                    View Logs
+                </a>
+                
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Light/Dark Theme">
+                    <!-- Icon populated dynamically by app.js -->
+                </button>
+            </div>
+        </nav>
+
+        <!-- Flash Alert Messages -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash-container">
+                {% for msg in messages %}
+                    <div class="flash">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span>{{ msg }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Core Page Content Block -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Custom Modern Application Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

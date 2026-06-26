@@ -1,0 +1,16 @@
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+.env
+
+# Vercel directories
+.vercel/
+
+# Local logs
+resume_logs.txt
